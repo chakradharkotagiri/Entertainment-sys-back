@@ -1,55 +1,41 @@
 const HttpError = require("../models/http-error");
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 const dotenv = require("dotenv");
 
 dotenv.config();
 
-// openai.apiKey = process.env.OPENAI_KEY;
-const openai = new OpenAI({
-  organization: process.env.OPENAI_ORG_ID,
-  apiKey: process.env.OPENAI_KEY,
-});
+// Initialize Gemini API
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const recommendationTypes = {
   Movies: "Names with few casts",
   Books: "Names with Authors",
   Article:
-    "Names of article, scope of article, link of the article, there should be atleast 5 articles suggested with working links",
+    "Names of article, scope of article, link of the article, there should be at least 5 articles suggested with working links",
   Music: "Names of the songs, artists, genre",
 };
 
-const getOpenAIResponse = async (messages) => {
+const getGeminiResponse = async (messages) => {
   try {
-    const completion = await openai.chat.completions.create({
-      messages,
-      model: "gpt-3.5-turbo",
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" }); // Use your model version
 
-    //   const assistantMessage = JSON.parse(
-    //     completion.choices[0]?.message?.content?.replace(/```json|```/g, "") ||
-    //       "{}"
-    //   );
+    // Convert messages into plain text conversation format
+    const formattedPrompt = messages.map((msg) => `${msg.role}: ${msg.content}`).join("\n");
 
-    return completion.choices[0]?.message?.content;
+    const result = await model.generateContent(formattedPrompt);
+    const response = await result.response;
+
+    return response.text();
   } catch (error) {
     console.error(error);
-    throw new HttpError(`Error in calling open ai => ${error}`, 500);
+    throw new HttpError(`Error in calling Gemini API => ${error}`, 500);
   }
 };
 
 const generateRecommendation = async (req, res, next) => {
   try {
     const { prompt, contentType } = req.body;
-
     console.log(req.body);
-    //gpt code
-
-    // const gptResponse = await openai.Completion.create({
-    //   engine: "text-davinci-003",
-    //   prompt: prompt,
-    //   role: `You are a ${contentType} recommendation System`,
-    //   //   max_tokens: 60,
-    // });
 
     const messages = [
       {
@@ -70,10 +56,10 @@ const generateRecommendation = async (req, res, next) => {
       },
     ];
 
-    const gptResponse = await getOpenAIResponse(messages);
-    console.log(gptResponse);
+    const geminiResponse = await getGeminiResponse(messages);
+    console.log(geminiResponse);
 
-    res.status(200).json(gptResponse);
+    res.status(200).json(geminiResponse);
   } catch (error) {
     console.log(error);
     return next(new HttpError("Something went wrong", 500));
