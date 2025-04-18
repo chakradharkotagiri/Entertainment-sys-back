@@ -12,7 +12,7 @@ app.use(morgan("tiny"));
 app.use(
   cors({
     origin: [
-      
+      "*",
       process.env.FRONTEND_URL,
     ],
     credentials: true,
