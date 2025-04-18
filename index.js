@@ -8,13 +8,19 @@ const app = express();
 const recommendationRoutes = require("./router/recommendationRoutes");
 dotenv.config();
 
-app.use(morgan("tiny"));
+const allowedOrigins = [
+  "https://ai-recommender-chakradhar.netlify.app", // frontend URL
+];
+
 app.use(
   cors({
-    origin: [
-      
-      process.env.FRONTEND_URL,
-    ],
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
